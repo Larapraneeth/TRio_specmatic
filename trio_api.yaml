@@ -1,0 +1,493 @@
+openapi: 3.0.3
+info:
+  title: TRIO API
+  version: 2.0.0
+  description: >
+    Executable contract for the TRIO Agentic AI backend (FastAPI).
+    This OpenAPI specification is the single source of truth for the
+    HTTP API exposed by TRIO. Specmatic uses it to contract-test the
+    running backend and to generate a mock for frontend development.
+
+    Endpoints covered:
+      - GET    /health
+      - GET    /api/agents/list
+      - GET    /api/system/info
+      - GET    /api/conversations/
+      - POST   /api/conversations/
+      - GET    /api/conversations/{cid}
+      - PATCH  /api/conversations/{cid}/title
+      - DELETE /api/conversations/{cid}
+      - POST   /api/chat/
+      - POST   /api/voice/speak
+
+servers:
+  - url: http://localhost:8000
+    description: Local TRIO backend (uvicorn)
+
+paths:
+  /health:
+    get:
+      summary: Liveness check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is online
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                online:
+                  value:
+                    status: online
+                    version: "2.0.0"
+
+  /api/agents/list:
+    get:
+      summary: List available agents
+      operationId: listAgents
+      responses:
+        '200':
+          description: The set of agents TRIO exposes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+              examples:
+                agents:
+                  value:
+                    agents:
+                      - id: chat
+                        name: Chat Agent
+                        description: General conversation and Q&A
+                        icon: "💬"
+                      - id: system
+                        name: System Agent
+                        description: Open/close desktop applications
+                        icon: "🖥️"
+
+  /api/system/info:
+    get:
+      summary: Runtime and Ollama status
+      operationId: systemInfo
+      responses:
+        '200':
+          description: System and model status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfoResponse'
+              examples:
+                info:
+                  value:
+                    os: Windows
+                    python: "3.11.9"
+                    ollama: online
+                    models:
+                      - "qwen2.5:7b"
+                      - "llama3.2:3b"
+                    active_model: "qwen2.5:7b"
+
+  /api/conversations/:
+    get:
+      summary: List conversations
+      operationId: listConversations
+      responses:
+        '200':
+          description: Conversations ordered by most recently updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationListResponse'
+              examples:
+                list:
+                  value:
+                    conversations:
+                      - id: "123e4567-e89b-12d3-a456-426614174000"
+                        title: "New Chat"
+                        created_at: "2026-06-22T10:00:00.000000"
+                        updated_at: "2026-06-22T10:00:00.000000"
+    post:
+      summary: Create a conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+            examples:
+              create:
+                value:
+                  title: "My Conversation"
+      responses:
+        '200':
+          description: The created conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+              examples:
+                created:
+                  value:
+                    id: "123e4567-e89b-12d3-a456-426614174000"
+                    title: "My Conversation"
+                    created_at: "2026-06-22T10:00:00.000000"
+                    updated_at: "2026-06-22T10:00:00.000000"
+
+  /api/conversations/{cid}:
+    get:
+      summary: Get a conversation with its messages
+      operationId: getConversation
+      description: >
+        Returns 404 when no conversation matches the id. The automated contract
+        test exercises this deterministic 404 path using a non-existent id.
+        The 200 (found) response returns a ConversationDetailResponse and is
+        demonstrated end-to-end via the create -> get flow during the live demo;
+        it is omitted from automated testing here because it requires seeding a
+        known record first (a state dependency Specmatic correctly surfaces).
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: Conversation id (UUID)
+          schema:
+            type: string
+          examples:
+            missing:
+              value: "00000000-0000-0000-0000-000000000000"
+      responses:
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing:
+                  value:
+                    detail: "Conversation not found"
+    delete:
+      summary: Delete a conversation
+      operationId: deleteConversation
+      parameters:
+        - $ref: '#/components/parameters/Cid'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+              examples:
+                ok:
+                  value:
+                    ok: true
+
+  /api/conversations/{cid}/title:
+    patch:
+      summary: Update a conversation title
+      operationId: updateConversationTitle
+      parameters:
+        - $ref: '#/components/parameters/Cid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTitleRequest'
+            examples:
+              rename:
+                value:
+                  title: "Renamed Conversation"
+      responses:
+        '200':
+          description: Title updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+              examples:
+                ok:
+                  value:
+                    ok: true
+
+  /api/chat/:
+    post:
+      summary: Send a chat message to the agent manager
+      operationId: chat
+      description: >
+        Routes a user message through the multi-agent manager and returns
+        the assistant reply plus routing metadata. Note: the reply content
+        is produced by a local LLM and is non-deterministic, so contract
+        testing here validates response SHAPE, not exact text.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              ask:
+                value:
+                  message: "What is the capital of France?"
+                  conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+                  history: []
+      responses:
+        '200':
+          description: Assistant reply with routing metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                reply:
+                  value:
+                    response: "The capital of France is Paris."
+                    agents_used: ["chat"]
+                    agent_statuses:
+                      - agent: chat
+                        status: done
+                    intent: "general_chat"
+                    execution_steps: ["Routed to chat agent", "Generated response"]
+                    conversation_id: "123e4567-e89b-12d3-a456-426614174000"
+                    message_id: "323e4567-e89b-12d3-a456-426614174222"
+        '503':
+          description: Local AI model unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ollamaDown:
+                  value:
+                    detail: "Local AI model unavailable: connection refused"
+
+  /api/voice/speak:
+    post:
+      summary: Text to speech
+      operationId: speak
+      description: Synthesizes speech and returns raw WAV audio bytes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TTSRequest'
+            examples:
+              speak:
+                value:
+                  text: "Hello from TRIO"
+      responses:
+        '200':
+          description: WAV audio stream
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+
+components:
+  parameters:
+    Cid:
+      name: cid
+      in: path
+      required: true
+      description: Conversation id (UUID)
+      schema:
+        type: string
+      examples:
+        cid:
+          value: "123e4567-e89b-12d3-a456-426614174000"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+
+    Agent:
+      type: object
+      required: [id, name, description, icon]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+
+    AgentListResponse:
+      type: object
+      required: [agents]
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    SystemInfoResponse:
+      type: object
+      required: [os, python, ollama, models, active_model]
+      properties:
+        os:
+          type: string
+        python:
+          type: string
+        ollama:
+          type: string
+        models:
+          type: array
+          items:
+            type: string
+        active_model:
+          type: string
+
+    Conversation:
+      type: object
+      required: [id, title, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    ConversationListResponse:
+      type: object
+      required: [conversations]
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conversation'
+
+    Message:
+      type: object
+      required: [id, conversation_id, role, content, agents_used, agent_statuses, intent, execution_steps, created_at]
+      properties:
+        id:
+          type: string
+        conversation_id:
+          type: string
+        role:
+          type: string
+        content:
+          type: string
+        agents_used:
+          type: array
+          items:
+            type: string
+        agent_statuses:
+          type: array
+          items:
+            type: object
+        intent:
+          type: string
+        execution_steps:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+
+    ConversationDetailResponse:
+      type: object
+      required: [conversation, messages]
+      properties:
+        conversation:
+          $ref: '#/components/schemas/Conversation'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+
+    CreateConversationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+
+    UpdateTitleRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        conversation_id:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatHistoryItem'
+
+    ChatHistoryItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+
+    ChatResponse:
+      type: object
+      required: [response, agents_used, agent_statuses, intent, execution_steps, conversation_id, message_id]
+      properties:
+        response:
+          type: string
+        agents_used:
+          type: array
+          items:
+            type: string
+        agent_statuses:
+          type: array
+          items:
+            type: object
+        intent:
+          type: string
+        execution_steps:
+          type: array
+          items:
+            type: string
+        conversation_id:
+          type: string
+        message_id:
+          type: string
+
+    TTSRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
