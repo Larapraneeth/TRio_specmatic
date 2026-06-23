@@ -1,0 +1,18 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/api/conversations/123e4567-e89b-12d3-a456-426614174000"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "conversation": {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "title": "Test Chat",
+        "created_at": "2026-06-22T10:00:00",
+        "updated_at": "2026-06-22T10:05:00"
+      },
+      "messages": []
+    }
+  }
+}

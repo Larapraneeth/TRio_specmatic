@@ -41,7 +41,7 @@ async def stream_ollama(messages: list, system_prompt: str = "", max_tokens: int
     }
 
     try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=3.0)) as client:
             response = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/chat",
                 json=payload
@@ -80,7 +80,7 @@ async def generate_ollama(prompt: str, system_prompt: str = "", max_tokens: int 
     }
 
     try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=3.0)) as client:
             response = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json=payload

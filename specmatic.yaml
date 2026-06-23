@@ -1,7 +1,29 @@
-version: 2
+version: 3
 
-contracts:
-  - filesystem:
-      directory: .
-    provides:
-      - trio_api.yaml
+systemUnderTest:
+  service:
+    $ref: "#/components/services/trioService"
+
+components:
+  sources:
+    localSpecs:
+      filesystem:
+        directory: .
+  services:
+    trioService:
+      description: TRIO Agentic AI backend (FastAPI)
+      definitions:
+        - definition:
+            source:
+              $ref: "#/components/sources/localSpecs"
+            specs:
+              - trio_api.yaml
+      runOptions:
+        openapi:
+          type: test
+          baseUrl: "http://host.docker.internal:8000"
+
+specmatic:
+  settings:
+    test:
+      schemaResiliencyTests: all

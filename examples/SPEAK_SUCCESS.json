@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/api/voice/speak",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "text": "Hello from TRIO"
+    }
+  },
+  "http-response": {
+    "status": 200
+  }
+}

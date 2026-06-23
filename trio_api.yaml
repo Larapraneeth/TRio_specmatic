@@ -248,6 +248,18 @@ paths:
                     execution_steps: ["Routed to chat agent", "Generated response"]
                     conversation_id: "123e4567-e89b-12d3-a456-426614174000"
                     message_id: "323e4567-e89b-12d3-a456-426614174222"
+        '422':
+          description: Validation error (invalid request body)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '503':
+          description: Local AI model unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/voice/speak:
     post:
@@ -272,6 +284,18 @@ paths:
               schema:
                 type: string
                 format: binary
+        '422':
+          description: Validation error (invalid request body)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '503':
+          description: TTS synthesis unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
