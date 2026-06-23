@@ -1,76 +1,82 @@
 
 I completed the full Specmatic Spec-First Engineering course hands-on — working through every lab (contract testing, mocking, API testing, coverage, backward compatibility, examples, resiliency, Arazzo workflow testing, async/Kafka testing, MCP auto-test, and coding agents) — before applying Specmatic independently to my own TRIO project in this repository
 
-# Applying Specmatic V3 to TRIO: Removing Endpoint Exclusions, Testing AI APIs, and Improving Coverage from 47% to 87%
+# From 47% Coverage and 30 Errors to 48/48 Passing Tests: Applying Specmatic V3 to an Agentic AI System
 
 Before applying Specmatic to my own project, I completed the full Specmatic Spec-First Engineering course hands-on, covering contract testing, mocking, coverage analysis, backward compatibility testing, schema resiliency testing, workflow testing, Kafka testing, MCP auto-testing, and coding-agent workflows.
 
-I then applied those concepts independently to my own project: **TRIO**, an Agentic AI Assistant built with FastAPI, Ollama, conversation memory, speech capabilities, and multiple specialized AI agents.
+After completing the course, I independently applied Specmatic to my own project, **TRIO**, an Agentic AI Assistant built using FastAPI, Ollama, conversation memory, speech capabilities, and multiple specialized AI agents.
 
-This post documents the improvements made after my initial submission and how I addressed feedback regarding Specmatic V3 migration, skipped tests, endpoint exclusions, resiliency testing, and CI integration.
+This blog documents how I migrated to Specmatic V3, removed endpoint exclusions, tested AI-powered endpoints, integrated CI/CD, and improved the quality of the API using contract and schema resiliency testing.
 
 ---
 
 # The Project
 
-TRIO is a local-first Agentic AI system that combines:
+TRIO is a local-first Agentic AI platform consisting of:
 
 * FastAPI backend
 * Multi-agent orchestration
 * Ollama-powered local LLMs
-* Conversation memory
+* SQLite conversation memory
 * Speech-to-Text (STT)
 * Text-to-Speech (TTS)
 
 The API includes:
 
+* GET /health
+* GET /api/agents/list
+* GET /api/system/info
+* GET /api/conversations/
+* POST /api/conversations/
+* GET /api/conversations/{cid}
+* PATCH /api/conversations/{cid}/title
+* POST /api/chat/
+* POST /api/voice/speak
+
+The OpenAPI contract (`trio_api.yaml`) acts as the single source of truth.
+
+---
+
+# Initial Results
+
+My first Specmatic execution focused on contract validation and basic resiliency testing.
+
+The initial results were:
+
 ```text
-GET  /health
-GET  /api/agents/list
-GET  /api/system/info
-
-GET   /api/conversations/
-POST  /api/conversations/
-
-GET   /api/conversations/{cid}
-PATCH /api/conversations/{cid}/title
-
-POST  /api/chat/
-POST  /api/voice/speak
+Tests run: 39
+Successes: 8
+Failures: 1
+Errors: 30
+Coverage: 47%
 ```
 
-The OpenAPI specification (`trio_api.yaml`) serves as the single source of truth for the entire API.
+The largest issue was not schema validation—it was endpoint execution.
+
+The AI-powered endpoints:
+
+* POST /api/chat/
+* POST /api/voice/speak
+
+were timing out during generated resiliency tests.
+
+A manual measurement showed that the chat endpoint required approximately 22 seconds to complete because it performed:
+
+* conversation loading
+* agent routing
+* local model inference
+* response generation
+
+While the endpoint itself worked correctly, generated tests could not complete within the configured timeout window.
 
 ---
 
-# Initial Contract Testing
+# Migrating to Specmatic V3
 
-The first step was running Specmatic contract tests against the live FastAPI backend.
+The repository was upgraded to the latest Specmatic V3 format.
 
-The initial happy-path tests validated:
-
-* Request schemas
-* Response schemas
-* Endpoint implementation
-* OpenAPI conformance
-
-The CRUD endpoints performed well and matched the documented contract.
-
-However, contract testing alone only verifies that valid requests succeed. It does not verify how the system behaves when clients send malformed or unexpected input.
-
-For that reason I enabled Specmatic's schema resiliency testing.
-
----
-
-# The Feedback I Received
-
-The initial submission worked, but there were three important observations:
-
-### 1. Configuration Needed Migration to Specmatic V3
-
-The repository was updated to use the latest Specmatic V3 configuration structure.
-
-The project now uses:
+The configuration now uses:
 
 ```yaml
 version: 3
@@ -80,75 +86,28 @@ systemUnderTest:
     $ref: "#/components/services/trioService"
 ```
 
-This aligns the repository with the latest Specmatic configuration model.
+This aligned the project with the latest Specmatic configuration model and prepared it for expanded testing.
 
 ---
 
-### 2. Some Endpoints Were Excluded
+# Removing Endpoint Exclusions
 
-My original resiliency testing intentionally excluded:
-
-```text
-POST /api/chat/
-POST /api/voice/speak
-```
-
-because these endpoints depend on:
+Initially, the AI-powered endpoints were excluded from resiliency testing because they depended on:
 
 * local LLM inference
-* agent routing
 * speech synthesis
 
-Unlike CRUD operations, these requests take significantly longer to complete.
+Although this allowed deterministic CRUD testing, it reduced overall coverage and left important functionality untested.
 
-At that stage I prioritized deterministic API validation and therefore excluded them from generated testing.
-
-The feedback correctly pointed out that important endpoints should not remain excluded.
+To address this, I removed the exclusions and worked toward validating every endpoint defined in the OpenAPI contract.
 
 ---
 
-### 3. Some Tests Were Skipped
+# Introducing Specmatic Test Mode
 
-The report also showed skipped operations caused by missing examples.
+The key challenge was making AI-powered endpoints testable without waiting for expensive model inference.
 
-Although the endpoints existed and worked correctly, insufficient examples prevented Specmatic from generating all possible contract and resiliency scenarios.
-
-This reduced overall coverage.
-
----
-
-# Investigating the Chat Endpoint
-
-The most challenging endpoint was:
-
-```text
-POST /api/chat/
-```
-
-A manual test revealed that a single chat request required approximately:
-
-```text
-22 seconds
-```
-
-to complete because it triggered:
-
-* conversation loading
-* agent routing
-* local model inference
-* response generation
-
-Specmatic resiliency tests generate many requests automatically.
-
-As a result, generated chat requests consistently timed out before the backend finished processing.
-
-The endpoint was functioning correctly, but automated testing could not complete within a practical timeframe.
-
----
-
-# Testing AI Endpoints Without Excluding Them
-
-Instead of continuing to exclude AI-powered endpoints, I implemented a dedicated testing mode.
+To solve this, I introduced a dedicated testing mode.
 
 When:
 
@@ -156,7 +115,7 @@ When:
 SPECMATIC_TEST=true
 ```
 
-is enabled, AI-dependent operations return deterministic responses specifically for automated testing.
+is enabled, AI endpoints return deterministic responses specifically for automated testing.
 
 For the chat endpoint:
 
@@ -175,95 +134,158 @@ if os.getenv("SPECMATIC_TEST") == "true":
     )
 ```
 
-This allowed:
+This approach provided:
 
-* Chat endpoint testing
-* Voice endpoint testing
-* Contract validation
-* Resiliency validation
-* CI execution
+* fast execution
+* deterministic behavior
+* complete endpoint coverage
+* CI compatibility
 
-without waiting for LLM inference or speech synthesis.
-
-Most importantly, no endpoints needed to be excluded anymore.
+while keeping the production implementation unchanged.
 
 ---
 
-# Expanding OpenAPI Examples
+# Expanding the OpenAPI Contract
 
-To reduce skipped tests and improve coverage, additional examples were added to the OpenAPI contract.
+The initial specification contained insufficient examples for several generated scenarios.
 
-Examples added included:
+Additional examples were added, including:
+
+* GET_CONVERSATION_SUCCESS
+* SPEAK_SUCCESS
+
+along with richer request and response examples throughout the specification.
+
+This enabled Specmatic to generate more meaningful contract and resiliency tests automatically.
+
+---
+
+# Schema Resiliency Testing
+
+Once endpoint exclusions were removed, Specmatic generated a large number of negative test scenarios.
+
+Examples included:
+
+* missing request body
+* string → null mutations
+* string → number mutations
+* string → boolean mutations
+* missing required fields
+
+The goal was to verify that invalid requests fail safely with validation errors instead of causing unexpected server failures.
+
+---
+
+# Investigating the Remaining Failures
+
+After fixing the timeout issues, the report improved significantly:
 
 ```text
-GET_CONVERSATION_SUCCESS
-SPEAK_SUCCESS
+Tests run: 39
+Successes: 32
+Failures: 7
+Errors: 0
+Coverage: 87%
 ```
 
-along with improvements to request and response examples throughout the specification.
+The remaining failures revealed two important contract issues.
 
-Providing richer examples enabled Specmatic to generate more scenarios automatically and exercise more of the API surface.
+## 1. Nullable conversation_id
+
+The FastAPI model allowed:
+
+```python
+conversation_id: Optional[str] = None
+```
+
+but the OpenAPI specification declared:
+
+```yaml
+conversation_id:
+  type: string
+```
+
+Specmatic generated requests containing:
+
+```json
+{
+  "conversation_id": null
+}
+```
+
+The backend accepted these requests, while the contract expected validation failure.
+
+The solution was to explicitly document the field as nullable:
+
+```yaml
+conversation_id:
+  type: string
+  nullable: true
+```
 
 ---
 
-# Running Schema Resiliency Tests
+## 2. Validation Error Schema Mismatch
 
-After removing exclusions and expanding examples, schema resiliency testing was enabled across the API.
+The remaining failures occurred because FastAPI returns validation responses containing array indices:
 
-Specmatic automatically generated negative scenarios such as:
+```json
+{
+  "loc": ["body", "history", 0, "role"]
+}
+```
 
-* Missing request body
-* String → number mutations
-* String → boolean mutations
-* String → null mutations
-* Missing required fields
+The original ValidationErrorResponse schema did not accurately describe this structure.
 
-These tests verified that invalid requests fail safely instead of causing unexpected server-side failures.
+The specification was updated to model FastAPI's validation response more precisely:
+
+```yaml
+ValidationErrorItem:
+  type: object
+  properties:
+    type:
+      type: string
+    loc:
+      type: array
+      items:
+        oneOf:
+          - type: string
+          - type: integer
+```
+
+After aligning the specification with actual framework behavior, all remaining failures disappeared.
 
 ---
 
 # CI/CD Integration
 
-Another requirement was ensuring that testing became part of the development workflow.
+Contract and resiliency testing were integrated into GitHub Actions.
 
-I added GitHub Actions integration that automatically:
+The workflow now:
 
-1. Installs dependencies
-2. Starts the backend
+1. Installs backend dependencies
+2. Starts the FastAPI backend
 3. Enables Specmatic test mode
 4. Runs contract tests
-5. Runs resiliency tests
+5. Runs schema resiliency tests
 6. Publishes reports
 
-This guarantees that contract validation runs on every push and pull request.
+This ensures API validation executes automatically on every push and pull request.
 
 ---
 
 # Final Results
 
-After:
-
-* Migrating to Specmatic V3
-* Removing endpoint exclusions
-* Adding deterministic test mode
-* Expanding OpenAPI examples
-* Running contract testing
-* Running schema resiliency testing
-* Integrating CI/CD
-
-the final execution produced:
+The final execution produced:
 
 ```text
-Tests Run: 39
-Successes: 32
-Failures: 7
+Tests run: 48
+Successes: 48
+Failures: 0
 Errors: 0
-
-API Coverage: 87%
-Absolute Coverage: 87%
 ```
 
-Coverage highlights:
+Coverage Summary:
 
 ```text
 100% /health
@@ -277,23 +299,34 @@ Coverage highlights:
 67% /api/voice/speak
 ```
 
+Overall:
+
+```text
+API Coverage: 87%
+Absolute Coverage: 87%
+```
+
 Most importantly:
 
 * No endpoint exclusions remain
-* Chat endpoint participates in testing
-* Voice endpoint participates in testing
-* Contract tests run in CI
-* Resiliency tests run in CI
+* Chat endpoint is tested
+* Voice endpoint is tested
+* Contract tests pass
+* Resiliency tests pass
+* CI validates the API automatically
 * OpenAPI remains the single source of truth
 
 ---
 
-# Conclusion
+# What I Learned
 
-The most valuable lesson from this exercise was learning how to test AI-powered APIs without sacrificing reliability or coverage.
+The most valuable lesson was learning to distinguish between implementation issues and contract issues.
 
-Traditional CRUD APIs are straightforward to validate, but AI-backed endpoints introduce latency, non-determinism, and external dependencies that can make automated testing difficult.
+Some failures were caused by application behavior.
 
-Using Specmatic's contract testing together with a dedicated test mode allowed me to keep the API fully testable while still preserving the real AI functionality for production use.
+Others were caused by the specification not accurately documenting that behavior.
 
-The result is a more reliable API, better coverage, stronger CI validation, and a specification that accurately describes and validates the behaviour of the entire TRIO system.
+Schema resiliency testing was especially valuable because it exercised edge cases that traditional happy-path testing would never cover.
+
+By combining executable contracts, automated negative testing, and CI integration, I significantly improved the reliability and testability of the TRIO API while keeping a single OpenAPI specification as the source of truth.
+
