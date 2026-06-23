@@ -439,6 +439,7 @@ components:
           type: string
         conversation_id:
           type: string
+          nullable: true
         history:
           type: array
           items:
@@ -483,13 +484,29 @@ components:
         ok:
           type: boolean
 
+    ValidationErrorItem:
+      type: object
+      properties:
+        type:
+          type: string
+        loc:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+        input: {}
+
     ValidationErrorResponse:
       type: object
+      required: [detail]
       properties:
         detail:
           type: array
           items:
-            type: object
+            $ref: '#/components/schemas/ValidationErrorItem'
 
     ErrorResponse:
       type: object
