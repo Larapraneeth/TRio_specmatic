@@ -1,7 +1,7 @@
 
 I completed the full Specmatic Spec-First Engineering course hands-on — working through every lab (contract testing, mocking, API testing, coverage, backward compatibility, examples, resiliency, Arazzo workflow testing, async/Kafka testing, MCP auto-test, and coding agents) — before applying Specmatic independently to my own TRIO project in this repository
 
-From 8 Failures to 16 Passing: Finding and Fixing Real Bugs in My AI Backend with Specmatic Schema Resiliency Testing
+#From 8 Failures to 16 Passing: Finding and Fixing Real Bugs in My AI Backend with Specmatic Schema Resiliency Testing
 
 When I added executable contracts to TRIO — my agentic AI assistant — I expected
 contract testing to confirm what I already believed: that my API worked. It did. But
