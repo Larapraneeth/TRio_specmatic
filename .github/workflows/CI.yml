@@ -17,6 +17,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install system audio dependencies (for TTS fallback)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak espeak-ng libespeak1
+
       - name: Install backend dependencies
         working-directory: backend
         run: |
