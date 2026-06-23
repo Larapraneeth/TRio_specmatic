@@ -254,12 +254,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
-        '503':
-          description: Local AI model unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /api/voice/speak:
     post:
@@ -284,18 +278,15 @@ paths:
               schema:
                 type: string
                 format: binary
+              examples:
+                SPEAK_SUCCESS:
+                  value: "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
         '422':
           description: Validation error (invalid request body)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationErrorResponse'
-        '503':
-          description: TTS synthesis unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
@@ -484,21 +475,6 @@ components:
         ok:
           type: boolean
 
-    ValidationErrorItem:
-      type: object
-      properties:
-        type:
-          type: string
-        loc:
-          type: array
-          items:
-            oneOf:
-              - type: string
-              - type: integer
-        msg:
-          type: string
-        input: {}
-
     ValidationErrorResponse:
       type: object
       required: [detail]
@@ -506,7 +482,34 @@ components:
         detail:
           type: array
           items:
-            $ref: '#/components/schemas/ValidationErrorItem'
+            type: object
+            required: [loc, msg, type]
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+              input:
+                oneOf:
+                  - type: string
+                  - type: number
+                  - type: integer
+                  - type: boolean
+                  - type: object
+                  - type: array
+                    items: {}
+                nullable: true
+              url:
+                type: string
+              ctx:
+                type: object
+                additionalProperties: true
 
     ErrorResponse:
       type: object

@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: Ollama API (subset used by TRIO)
+  description: >
+    A minimal OpenAPI specification for the Ollama endpoints TRIO depends on.
+    Specmatic uses this spec to run a mock (stub) of Ollama, so TRIO's
+    LLM-assisted endpoints can be tested end to end without a real model
+    running and without hardcoding responses in application code.
+  version: "1.0.0"
+
+paths:
+  /api/tags:
+    get:
+      summary: List available models
+      operationId: ollamaTags
+      responses:
+        '200':
+          description: List of locally available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+              examples:
+                TAGS_MOCK:
+                  value:
+                    models:
+                      - name: "qwen2.5:3b"
+                        model: "qwen2.5:3b"
+                        size: 1900000000
+
+  /api/chat:
+    post:
+      summary: Generate a chat completion
+      operationId: ollamaChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              CHAT_MOCK:
+                value:
+                  model: "qwen2.5:3b"
+                  stream: false
+                  messages:
+                    - role: "user"
+                      content: "Hello"
+      responses:
+        '200':
+          description: Chat completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                CHAT_MOCK:
+                  value:
+                    model: "qwen2.5:3b"
+                    created_at: "2026-06-23T00:00:00.000000Z"
+                    message:
+                      role: "assistant"
+                      content: "This is a mocked LLM response from Specmatic."
+                    done: true
+
+  /api/generate:
+    post:
+      summary: Generate a completion from a single prompt
+      operationId: ollamaGenerate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+            examples:
+              GENERATE_MOCK:
+                value:
+                  model: "qwen2.5:3b"
+                  stream: false
+                  prompt: "Summarize this"
+      responses:
+        '200':
+          description: Generate response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+              examples:
+                GENERATE_MOCK:
+                  value:
+                    model: "qwen2.5:3b"
+                    created_at: "2026-06-23T00:00:00.000000Z"
+                    response: "This is a mocked generate response from Specmatic."
+                    done: true
+
+components:
+  schemas:
+    Model:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+        size:
+          type: integer
+
+    TagsResponse:
+      type: object
+      required: [models]
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+
+    Message:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+
+    ChatRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model:
+          type: string
+        stream:
+          type: boolean
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        options:
+          type: object
+          properties:
+            temperature:
+              type: number
+            num_predict:
+              type: integer
+
+    ChatResponse:
+      type: object
+      required: [model, message, done]
+      properties:
+        model:
+          type: string
+        created_at:
+          type: string
+        message:
+          $ref: '#/components/schemas/Message'
+        done:
+          type: boolean
+
+    GenerateRequest:
+      type: object
+      required: [model, prompt]
+      properties:
+        model:
+          type: string
+        stream:
+          type: boolean
+        prompt:
+          type: string
+        system:
+          type: string
+        options:
+          type: object
+          properties:
+            temperature:
+              type: number
+            num_predict:
+              type: integer
+
+    GenerateResponse:
+      type: object
+      required: [model, response, done]
+      properties:
+        model:
+          type: string
+        created_at:
+          type: string
+        response:
+          type: string
+        done:
+          type: boolean
