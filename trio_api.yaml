@@ -8,17 +8,11 @@ info:
     HTTP API exposed by TRIO. Specmatic uses it to contract-test the
     running backend and to generate a mock for frontend development.
 
-    Endpoints covered:
-      - GET    /health
-      - GET    /api/agents/list
-      - GET    /api/system/info
-      - GET    /api/conversations/
-      - POST   /api/conversations/
-      - GET    /api/conversations/{cid}
-      - PATCH  /api/conversations/{cid}/title
-      - DELETE /api/conversations/{cid}
-      - POST   /api/chat/
-      - POST   /api/voice/speak
+    Inline examples follow Specmatic's naming convention: a request
+    example and its response example share the same name, so together
+    they form one named contract test (e.g. CREATE_CONVERSATION_SUCCESS).
+    External examples for the same operations are provided as JSON files
+    under ./examples for reviewers who prefer externalised test data.
 
 servers:
   - url: http://localhost:8000
@@ -37,7 +31,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
               examples:
-                online:
+                HEALTH_SUCCESS:
                   value:
                     status: online
                     version: "2.0.0"
@@ -54,17 +48,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AgentListResponse'
               examples:
-                agents:
+                LIST_AGENTS_SUCCESS:
                   value:
                     agents:
                       - id: chat
                         name: Chat Agent
                         description: General conversation and Q&A
-                        icon: "💬"
-                      - id: system
-                        name: System Agent
-                        description: Open/close desktop applications
-                        icon: "🖥️"
+                        icon: "AGENT"
 
   /api/system/info:
     get:
@@ -78,7 +68,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SystemInfoResponse'
               examples:
-                info:
+                SYSTEM_INFO_SUCCESS:
                   value:
                     os: Windows
                     python: "3.11.9"
@@ -100,7 +90,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConversationListResponse'
               examples:
-                list:
+                LIST_CONVERSATIONS_SUCCESS:
                   value:
                     conversations:
                       - id: "123e4567-e89b-12d3-a456-426614174000"
@@ -117,7 +107,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateConversationRequest'
             examples:
-              create:
+              CREATE_CONVERSATION_SUCCESS:
                 value:
                   title: "My Conversation"
       responses:
@@ -128,12 +118,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Conversation'
               examples:
-                created:
+                CREATE_CONVERSATION_SUCCESS:
                   value:
                     id: "123e4567-e89b-12d3-a456-426614174000"
                     title: "My Conversation"
                     created_at: "2026-06-22T10:00:00.000000"
                     updated_at: "2026-06-22T10:00:00.000000"
+        '422':
+          description: Validation error (invalid request body)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
 
   /api/conversations/{cid}:
     get:
@@ -154,7 +151,7 @@ paths:
           schema:
             type: string
           examples:
-            missing:
+            GET_CONVERSATION_NOT_FOUND:
               value: "00000000-0000-0000-0000-000000000000"
       responses:
         '404':
@@ -164,32 +161,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                missing:
+                GET_CONVERSATION_NOT_FOUND:
                   value:
                     detail: "Conversation not found"
-    delete:
-      summary: Delete a conversation
-      operationId: deleteConversation
-      parameters:
-        - $ref: '#/components/parameters/Cid'
-      responses:
-        '200':
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
-              examples:
-                ok:
-                  value:
-                    ok: true
 
   /api/conversations/{cid}/title:
     patch:
       summary: Update a conversation title
       operationId: updateConversationTitle
       parameters:
-        - $ref: '#/components/parameters/Cid'
+        - name: cid
+          in: path
+          required: true
+          description: Conversation id (UUID)
+          schema:
+            type: string
+          examples:
+            UPDATE_TITLE_SUCCESS:
+              value: "123e4567-e89b-12d3-a456-426614174000"
       requestBody:
         required: true
         content:
@@ -197,7 +186,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateTitleRequest'
             examples:
-              rename:
+              UPDATE_TITLE_SUCCESS:
                 value:
                   title: "Renamed Conversation"
       responses:
@@ -208,9 +197,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
               examples:
-                ok:
+                UPDATE_TITLE_SUCCESS:
                   value:
                     ok: true
+        '422':
+          description: Validation error (invalid request body)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
 
   /api/chat/:
     post:
@@ -218,9 +214,9 @@ paths:
       operationId: chat
       description: >
         Routes a user message through the multi-agent manager and returns
-        the assistant reply plus routing metadata. Note: the reply content
-        is produced by a local LLM and is non-deterministic, so contract
-        testing here validates response SHAPE, not exact text.
+        the assistant reply plus routing metadata. The reply content is
+        produced by a local LLM and is non-deterministic, so contract
+        testing validates response SHAPE (fields and types), not exact text.
       requestBody:
         required: true
         content:
@@ -228,7 +224,7 @@ paths:
             schema:
               $ref: '#/components/schemas/ChatRequest'
             examples:
-              ask:
+              CHAT_SUCCESS:
                 value:
                   message: "What is the capital of France?"
                   conversation_id: "123e4567-e89b-12d3-a456-426614174000"
@@ -241,7 +237,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
               examples:
-                reply:
+                CHAT_SUCCESS:
                   value:
                     response: "The capital of France is Paris."
                     agents_used: ["chat"]
@@ -252,16 +248,6 @@ paths:
                     execution_steps: ["Routed to chat agent", "Generated response"]
                     conversation_id: "123e4567-e89b-12d3-a456-426614174000"
                     message_id: "323e4567-e89b-12d3-a456-426614174222"
-        '503':
-          description: Local AI model unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                ollamaDown:
-                  value:
-                    detail: "Local AI model unavailable: connection refused"
 
   /api/voice/speak:
     post:
@@ -275,7 +261,7 @@ paths:
             schema:
               $ref: '#/components/schemas/TTSRequest'
             examples:
-              speak:
+              SPEAK_SUCCESS:
                 value:
                   text: "Hello from TRIO"
       responses:
@@ -288,18 +274,6 @@ paths:
                 format: binary
 
 components:
-  parameters:
-    Cid:
-      name: cid
-      in: path
-      required: true
-      description: Conversation id (UUID)
-      schema:
-        type: string
-      examples:
-        cid:
-          value: "123e4567-e89b-12d3-a456-426614174000"
-
   schemas:
     HealthResponse:
       type: object
@@ -424,6 +398,15 @@ components:
         title:
           type: string
 
+    ChatHistoryItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+
     ChatRequest:
       type: object
       required: [message]
@@ -436,15 +419,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChatHistoryItem'
-
-    ChatHistoryItem:
-      type: object
-      required: [role, content]
-      properties:
-        role:
-          type: string
-        content:
-          type: string
 
     ChatResponse:
       type: object
@@ -484,6 +458,14 @@ components:
       properties:
         ok:
           type: boolean
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
 
     ErrorResponse:
       type: object

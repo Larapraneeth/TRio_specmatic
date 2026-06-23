@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/api/conversations/00000000-0000-0000-0000-000000000000"
+  },
+  "http-response": {
+    "status": 404,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "detail": "Conversation not found"
+    }
+  }
+}

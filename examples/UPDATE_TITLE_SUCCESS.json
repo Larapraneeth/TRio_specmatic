@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "method": "PATCH",
+    "path": "/api/conversations/123e4567-e89b-12d3-a456-426614174000/title",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "title": "Renamed Conversation"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "ok": true
+    }
+  }
+}

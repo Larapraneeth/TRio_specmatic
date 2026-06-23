@@ -1,0 +1,25 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/api/chat/",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "message": "What is the capital of France?",
+      "conversation_id": "123e4567-e89b-12d3-a456-426614174000",
+      "history": []
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "response": "The capital of France is Paris.",
+      "agents_used": ["chat"],
+      "agent_statuses": [{ "agent": "chat", "status": "done" }],
+      "intent": "general_chat",
+      "execution_steps": ["Routed to chat agent", "Generated response"],
+      "conversation_id": "123e4567-e89b-12d3-a456-426614174000",
+      "message_id": "323e4567-e89b-12d3-a456-426614174222"
+    }
+  }
+}

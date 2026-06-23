@@ -1,0 +1,14 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/health"
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "status": "online",
+      "version": "2.0.0"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local data (recreated on startup)
+backend/memory/*.db
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+chromadb/
+
+# Secrets
+.env
+.env.*
+
+# Specmatic / build output
+build/
+.specmatic/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

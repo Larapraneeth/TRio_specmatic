@@ -1,0 +1,20 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/api/conversations/",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "title": "My Conversation"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "title": "My Conversation",
+      "created_at": "2026-06-22T10:00:00.000000",
+      "updated_at": "2026-06-22T10:00:00.000000"
+    }
+  }
+}

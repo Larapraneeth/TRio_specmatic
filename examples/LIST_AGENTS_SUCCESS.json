@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/api/agents/list"
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "agents": [
+        { "id": "chat", "name": "Chat Agent", "description": "General conversation and Q&A", "icon": "AGENT" }
+      ]
+    }
+  }
+}

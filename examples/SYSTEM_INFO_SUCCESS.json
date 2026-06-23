@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/api/system/info"
+  },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "os": "Windows",
+      "python": "3.11.9",
+      "ollama": "online",
+      "models": ["qwen2.5:7b", "llama3.2:3b"],
+      "active_model": "qwen2.5:7b"
+    }
+  }
+}
