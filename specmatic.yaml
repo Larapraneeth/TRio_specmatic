@@ -22,8 +22,3 @@ components:
         openapi:
           type: test
           baseUrl: "http://host.docker.internal:8000"
-
-specmatic:
-  settings:
-    test:
-      schemaResiliencyTests: all

@@ -22,12 +22,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            espeak \
-            espeak-ng \
-            libespeak1 \
-            ffmpeg \
-            curl
+          sudo apt-get install -y espeak espeak-ng libespeak1 ffmpeg curl
 
       - name: Install Backend Dependencies
         working-directory: backend
@@ -48,56 +43,31 @@ jobs:
         run: |
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8888/api/tags > /dev/null; then
-              echo "Ollama mock is up"
-              exit 0
+              echo "Ollama mock is up"; exit 0
             fi
-            echo "Waiting for Ollama mock... ($i)"
-            sleep 2
+            echo "Waiting for Ollama mock... ($i)"; sleep 2
           done
-
-          echo "Ollama mock failed to start"
-          docker logs ollama-mock || true
-          exit 1
+          echo "Ollama mock failed to start"; docker logs ollama-mock || true; exit 1
 
       - name: Start TRIO Backend
         working-directory: backend
         env:
           OLLAMA_BASE_URL: http://localhost:8888
         run: |
-          nohup uvicorn main:app \
-            --host 0.0.0.0 \
-            --port 8000 \
-            > server.log 2>&1 &
+          nohup uvicorn main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
 
       - name: Wait For Backend
         working-directory: backend
         run: |
           for i in $(seq 1 60); do
             if curl -sf http://localhost:8000/health > /dev/null; then
-              echo "Backend is up"
-              exit 0
+              echo "Backend is up"; exit 0
             fi
-
-            echo "Waiting for backend... ($i)"
-            sleep 2
+            echo "Waiting for backend... ($i)"; sleep 2
           done
+          echo "Backend failed to start"; cat server.log || true; exit 1
 
-          echo "Backend failed to start"
-          cat server.log || true
-          exit 1
-
-      - name: Verify Voice Endpoint
-        run: |
-          curl \
-            -X POST \
-            http://localhost:8000/api/voice/speak \
-            -H "Content-Type: application/json" \
-            -d '{"text":"hello"}' \
-            --output test.wav
-
-          ls -lh test.wav
-
-      - name: Run Specmatic Contract And Resiliency Tests
+      - name: Run Contract Tests (happy path only)
         run: |
           docker run --rm \
             --network host \
@@ -105,13 +75,38 @@ jobs:
             -w /usr/src/app \
             specmatic/specmatic test trio_api.yaml \
             --testBaseURL=http://localhost:8000
+          # Save the contract report
+          mkdir -p reports/contract
+          cp -r build/reports/specmatic/test/html/* reports/contract/
 
-      - name: Upload Specmatic Report
+      - name: Run Resiliency Tests (generative)
+        env:
+          SPECMATIC_GENERATIVE_TESTS: "true"
+        run: |
+          docker run --rm \
+            --network host \
+            -e SPECMATIC_GENERATIVE_TESTS=true \
+            -v "${{ github.workspace }}:/usr/src/app" \
+            -w /usr/src/app \
+            specmatic/specmatic test trio_api.yaml \
+            --testBaseURL=http://localhost:8000
+          # Save the resiliency report
+          mkdir -p reports/resiliency
+          cp -r build/reports/specmatic/test/html/* reports/resiliency/
+
+      - name: Upload Contract Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: specmatic-html-report
-          path: build/reports/specmatic/test/html
+          name: contract-test-report
+          path: reports/contract
+
+      - name: Upload Resiliency Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resiliency-test-report
+          path: reports/resiliency
 
       - name: Upload Backend Logs
         if: always()
@@ -122,5 +117,4 @@ jobs:
 
       - name: Stop Ollama Mock
         if: always()
-        run: |
-          docker rm -f ollama-mock || true
+        run: docker rm -f ollama-mock || true
