@@ -1,246 +1,181 @@
-# TRIO Agentic AI – Specmatic Contract Testing
+# TRIO + Specmatic: Spec-First Engineering, Contract Testing & Resiliency Testing
 
 ## Overview
 
-This repository demonstrates contract testing and API resiliency testing for the TRIO Agentic AI backend using Specmatic V3.
+TRIO is an Agentic AI Assistant built using FastAPI, local LLMs (Ollama), conversation memory, speech-to-text, text-to-speech, and a React frontend.
 
-The goal of this project is to ensure that the OpenAPI specification remains the single source of truth for the API and that all implemented endpoints comply with the published contract.
+As part of this project, I applied Specmatic's Spec-First Engineering approach by making the OpenAPI specification the single source of truth for development, testing, mocking, and CI validation.
 
-## Features
+The repository demonstrates:
 
-* OpenAPI 3.0.3 Contract
-* Specmatic V3 Configuration
+* OpenAPI-driven development
 * Contract Testing
 * Schema Resiliency Testing
+* API Coverage Reporting
+* Specmatic Mocking
 * GitHub Actions CI Integration
+* LLM Dependency Virtualization
+* End-to-End Validation of AI and Voice APIs
+
+---
+
+## Specmatic Learning Journey
+
+Before applying Specmatic to TRIO, I completed the full Specmatic Spec-First Engineering course and worked through all hands-on labs, including:
+
+* Contract Testing
+* API Mocking
+* API Coverage Reporting
+* Backward Compatibility Testing
+* Schema Resiliency Testing
+* Example-driven Testing
+* Arazzo Workflow Testing
+* Async / Kafka Testing
+* MCP Auto Testing
+* Coding Agents
+
+The knowledge gained from these labs was then applied independently to this repository.
+
+---
+
+## Architecture
+
+TRIO consists of:
+
 * FastAPI Backend
-* Local Ollama-powered AI Agents
-* Voice (TTS/STT) APIs
-* Conversation Management APIs
+* Multi-Agent Routing System
+* SQLite Conversation Memory
+* Ollama Local LLM Integration
+* Speech-to-Text Module
+* Text-to-Speech Module
+* React Frontend
 
 ---
 
-## API Endpoints
+## Specmatic Implementation
 
-### Health
+### OpenAPI Specification
 
-```http
-GET /health
-```
+The OpenAPI specification (`trio_api.yaml`) acts as the single source of truth.
 
-Returns service health and version information.
+Covered APIs:
 
-### Agents
-
-```http
-GET /api/agents/list
-```
-
-Returns available AI agents.
-
-### System Information
-
-```http
-GET /api/system/info
-```
-
-Returns runtime and model status.
-
-### Conversations
-
-```http
-GET    /api/conversations/
-POST   /api/conversations/
-GET    /api/conversations/{cid}
-PATCH  /api/conversations/{cid}/title
-```
-
-Provides conversation management functionality.
-
-### Chat
-
-```http
-POST /api/chat/
-```
-
-Routes user requests through the TRIO agent manager.
-
-### Voice
-
-```http
-POST /api/voice/speak
-POST /api/voice/transcribe
-```
-
-Provides text-to-speech and speech-to-text capabilities.
+* GET /health
+* GET /api/agents/list
+* GET /api/system/info
+* GET /api/conversations/
+* POST /api/conversations/
+* GET /api/conversations/{cid}
+* PATCH /api/conversations/{cid}/title
+* POST /api/chat/
+* POST /api/voice/speak
 
 ---
 
-## Project Structure
+### Contract Testing
 
-```text
-trio-specmatic/
-│
-├── backend/
-│   ├── api/
-│   ├── agents/
-│   ├── core/
-│   ├── memory/
-│   └── voice/
-│
-├── examples/
-│
-├── reports/
-│
-├── .github/workflows/
-│
-├── trio_api.yaml
-├── specmatic.yaml
-└── README.md
-```
+Specmatic validates all request and response structures against the OpenAPI specification.
+
+Positive scenarios verify:
+
+* Valid requests
+* Response schemas
+* Response codes
+* Content types
 
 ---
 
-## Running the Backend
+### Schema Resiliency Testing
 
-### Create Virtual Environment
+Specmatic automatically generates negative test cases by mutating requests.
 
-```bash
-python -m venv venv
-```
+Examples include:
 
-### Activate Environment
+* Missing request bodies
+* Null values
+* Number instead of string
+* Boolean instead of string
+* Invalid nested object structures
 
-Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-Linux / macOS:
-
-```bash
-source venv/bin/activate
-```
-
-### Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Start Backend
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-### Verify
-
-```bash
-http://localhost:8000/docs
-```
+The API is verified to return safe 4xx responses rather than failing with 5xx errors.
 
 ---
 
-## Running Contract Tests
+### Mocking LLM Dependencies
 
-```bash
-docker run --rm \
--v "${PWD}:/usr/src/app" \
--w /usr/src/app \
-specmatic/specmatic test trio_api.yaml \
---testBaseURL=http://host.docker.internal:8000
-```
+Instead of hardcoding LLM responses, Specmatic Stub is used to mock the Ollama API during CI execution.
 
----
+Benefits:
 
-## Running Resiliency Tests
-
-```bash
-docker run --rm \
--v "${PWD}:/usr/src/app" \
--w /usr/src/app \
-specmatic/specmatic test trio_api.yaml \
---testBaseURL=http://host.docker.internal:8000
-```
-
-Resiliency tests automatically generate negative scenarios to validate schema enforcement and request validation.
+* Deterministic tests
+* Faster execution
+* No dependency on local models
+* Stable CI pipelines
 
 ---
 
-## Specmatic Test Mode
+### GitHub Actions CI
 
-AI-backed endpoints such as:
-
-```text
-POST /api/chat/
-POST /api/voice/speak
-```
-
-can take longer due to model inference.
-
-To ensure deterministic and fast CI execution, a dedicated test mode was introduced:
-
-```bash
-SPECMATIC_TEST=true
-```
-
-When enabled:
-
-* Chat endpoint returns a mock response.
-* Voice endpoint returns mock WAV content.
-* Contract and resiliency tests execute without waiting for model inference.
-
----
-
-## Continuous Integration
-
-GitHub Actions automatically runs:
+The project automatically runs:
 
 * Contract Tests
 * Resiliency Tests
+* Coverage Reports
 
 on every push and pull request.
 
-Workflow location:
+---
 
-```text
-.github/workflows/CI.yml
-```
+## Final Results
+
+### Coverage
+
+100% API Coverage
+
+100% Absolute Coverage
+
+### Test Results
+
+Tests Run: 48
+
+Successes: 48
+
+Failures: 0
+
+Errors: 0
+
+WIP: 0
 
 ---
 
-## Results
+## Key Improvements Identified Through Testing
 
-### Achievements
+Specmatic helped identify:
 
-* Migrated to Specmatic V3
-* Added OpenAPI examples
-* Added Contract Testing
-* Added Schema Resiliency Testing
-* Added GitHub Actions CI
-* Removed endpoint exclusions
-* Included Chat and Voice APIs in testing
-* Achieved 87% API Coverage
+* Missing validation response documentation
+* Missing request-response example pairs
+* Uncovered negative test scenarios
+* CI-only TTS execution issues
+* Contract completeness gaps
+
+These issues were resolved through updates to the OpenAPI specification, API implementation, and CI pipeline.
 
 ---
 
-## Tech Stack
+## Repository
 
+https://github.com/Larapraneeth/TRio_specmatic
+
+---
+
+## Technologies Used
+
+* Python
 * FastAPI
-* Python 3.11
+* SQLite
 * Ollama
-* Specmatic V3
-* Docker
-* GitHub Actions
+* Specmatic
 * OpenAPI 3.0.3
-
----
-
-## Author
-
-**Lara Praneeth Kondeti**
-
-B.Tech Computer Science Engineering
-Indian Institute of Information Technology (IIIT) Surat
+* GitHub Actions
+* Docker
+* Speech Processing Tools
